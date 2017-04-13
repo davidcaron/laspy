@@ -6,6 +6,7 @@ import struct
 from types import GeneratorType
 import numpy as np
 import copy
+import io
 
 
 # Not used right now - but could be a handy place to centralize file modes
@@ -50,8 +51,13 @@ class FakeMmap(object):
     An object imitating a memory mapped file,
     constructed from 'buffer like' data.
     '''
-    def __init__(self, filename, pos=0):
-        data = read_compressed(filename)
+    def __init__(self, filename=None, bytes_data=None, pos=0):
+        if filename is not None:
+            data = read_compressed(filename)
+        elif bytes_data is not None:
+            data = bytes_data
+        else:
+            raise laspy.util.LaspyException("Provide compressed filename or bytes")
         self.view = memoryview(data)
         self.pos = pos
         # numpy needs this, unfortunately
@@ -101,7 +107,7 @@ class DataProvider():
         self.manager = manager
         self.mode = manager.mode
         # Figure out if this file is compressed
-        if self.mode in ("w"):
+        if self.mode in ("w", "bytes"):
             self.compressed = False
         else:
             try:
@@ -121,7 +127,9 @@ class DataProvider():
 
     def open(self, mode):
         '''Open the file, catch simple problems.'''
-        if (not self.compressed) or self.mode == "r-":
+        if mode == "bytes":
+            self.fileref = io.BytesIO(self.filename)
+        elif (not self.compressed) or self.mode == "r-":
             try:
                 self.fileref = open(self.filename, mode)
             except(Exception):
@@ -196,9 +204,11 @@ class DataProvider():
         if self.fileref == False and not self.compressed:
             raise laspy.util.LaspyException("File not opened.")
         try:
-            if self.mode in ("r", "r-"):
+            if self.mode == "bytes":
+                self._mmap = FakeMmap(bytes_data=self.filename)
+            elif self.mode in ("r", "r-"):
                 if self.compressed and self.mode != "r-":
-                    self._mmap=FakeMmap(self.filename)
+                    self._mmap=FakeMmap(filename=self.filename)
                 else:
                     self._mmap = mmap.mmap(self.fileref.fileno(), 0, access = mmap.ACCESS_READ)
             elif self.mode in ("w", "rw"):
@@ -270,6 +280,8 @@ class FileManager(object):
         elif self.mode == "w":
             self.setup_write(header, vlrs, evlrs)
             return
+        elif self.mode == "bytes":
+            self.setup_read_write(vlrs, evlrs, read_only=True)
         else:
             raise laspy.util.LaspyException("Mode %s not supported / implemented" % mode)
     
@@ -288,6 +300,8 @@ class FileManager(object):
             open_mode = "rb"
         else:
             open_mode = "r+b"
+        if self.mode == "bytes":
+            open_mode = self.mode
         self._header_current = True
         self.data_provider.open(open_mode)
         self.data_provider.map() 

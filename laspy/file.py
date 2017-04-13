@@ -16,7 +16,8 @@ class File(object):
                        mode='r',
                        in_srs=None,
                        out_srs=None,
-                       evlrs = False):
+                       evlrs = False,
+                       bytes_data = None):
         '''Instantiate a file object to represent an LAS file.
 
         :arg filename: The filename to open
@@ -62,6 +63,7 @@ class File(object):
         self._mode = mode.lower()
         self.in_srs = in_srs
         self.out_srs = out_srs
+        self.bytes_data = bytes_data
         self.open()
 
     def open(self):
@@ -89,6 +91,18 @@ class File(object):
                     dimname = dimension.name.decode().replace("\x00", "").replace(" ", "_").lower()
                     self.addProperty(dimname)
 
+        elif self._mode == "bytes":
+            if self._header is None:
+                self._reader = base.Reader(self.bytes_data, mode=self._mode)
+                self._header = self._reader.get_header()
+            else:
+                raise util.LaspyException("Headers must currently be stored in the file, you provided: " + str(self._header))
+
+            ## Wire up API for extra dimensions
+            if self._reader.extra_dimensions != []:
+                for dimension in self._reader.extra_dimensions:
+                    dimname = dimension.name.decode().replace("\x00", "").replace(" ", "_").lower()
+                    self.addProperty(dimname)
 
         elif self._mode == 'rw':
             if self._header is None:
@@ -141,7 +155,7 @@ class File(object):
     def close(self, ignore_header_changes = False, minmax_mode="scaled"):
         '''Closes the LAS file
         '''
-        if self._mode in ("r", "r-"):
+        if self._mode in ("r", "r-", "bytes"):
             self._reader.close()
             self._reader = None
             self._header = None

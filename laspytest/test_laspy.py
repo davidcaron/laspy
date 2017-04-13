@@ -838,6 +838,23 @@ class LazNoPointMapTestCase(unittest.TestCase):
             plas = File.File(simple, mode="rr")
 
 
+class LasBytesReaderTestCase(unittest.TestCase):
+    simple = os.path.join(os.path.dirname(__file__), 'data', 'simple.las')
+    tempfile = "junk.las"
+
+    def setUp(self):
+        really_copyfile(self.simple, self.tempfile)
+
+    def test_read_bytes(self):
+        """Testing ability to read laz files."""
+        opened_temp_file = open(self.tempfile, "rb").read()
+        File1 = File.File(None, bytes_data=opened_temp_file, mode="bytes")
+        self.assertTrue(len(File1.X) == 1065)
+        File1.close()
+
+    def tearDown(self):
+        really_remove(self.tempfile)
+
 def test_laspy():
     reader = unittest.TestLoader().loadTestsFromTestCase(LasReaderTestCase)
     writer = unittest.TestLoader().loadTestsFromTestCase(LasWriterTestCase)
