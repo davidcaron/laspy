@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import laspy
 from laspy import base
 from laspy import util
 from laspy import header
@@ -131,7 +132,7 @@ class File(object):
         elif self._mode == 'w+':
             raise NotImplementedError
         else:
-            raise laspy.util.LaspyException("Mode %s not supported" % mode)
+            raise laspy.util.LaspyException("Mode %s not supported" % self._mode)
 
         if self._reader.compressed and self._mode not in ("r", "r-"):
             raise NotImplementedError("Compressed files / buffer objects can only be opened in mode 'r' for now")            
