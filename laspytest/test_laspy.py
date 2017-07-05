@@ -846,7 +846,7 @@ class LasBytesReaderTestCase(unittest.TestCase):
         really_copyfile(self.simple, self.tempfile)
 
     def test_read_bytes(self):
-        """Testing ability to read laz files."""
+        """Testing ability to read bytes data."""
         opened_temp_file = open(self.tempfile, "rb").read()
         File1 = File.File(None, bytes_data=opened_temp_file, mode="bytes")
         self.assertTrue(len(File1.X) == 1065)
